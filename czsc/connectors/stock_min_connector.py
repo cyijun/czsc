@@ -19,7 +19,7 @@ from czsc.connectors._local_minute_utils import (
     _standardize_kline,
 )
 
-_STOCK_BASE_PATH = Path(os.environ.get("CZSC_STOCK_MIN_PATH", "/mnt/h/stock_min/stk_min_parquet_2000-2025"))
+_STOCK_BASE_PATH = Path(os.environ.get("CZSC_STOCK_MIN_PATH", "/mnt/h/stock_min/stk_min_parquet_2000-2026"))
 _EXCHANGES = ("sz", "sh", "bj")
 
 

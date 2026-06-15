@@ -19,7 +19,7 @@ from czsc.connectors._local_minute_utils import (
     _standardize_kline,
 )
 
-_ETF_BASE_PATH = Path(os.environ.get("CZSC_ETF_MIN_PATH", "/mnt/h/etf_min/etf_min_parquet_2000-2025"))
+_ETF_BASE_PATH = Path(os.environ.get("CZSC_ETF_MIN_PATH", "/mnt/h/etf_min/etf_min_parquet_2000-2026"))
 
 
 def get_symbols() -> list[str]:
@@ -28,7 +28,7 @@ def get_symbols() -> list[str]:
     if not path.exists():
         raise FileNotFoundError(f"ETF 数据文件不存在: {path}")
 
-    codes = pl.scan_parquet(str(path)).select(["code", "exchange"]).unique().collect()
+    codes = pl.scan_parquet(str(path)).select(["code", "exchange"]).unique().collect(engine="streaming")
 
     symbols = []
     for row in codes.iter_rows(named=True):

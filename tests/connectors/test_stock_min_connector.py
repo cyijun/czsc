@@ -6,7 +6,7 @@ import pytest
 import czsc
 import czsc.connectors.stock_min_connector as smc
 
-DATA_PATH = Path("/mnt/h/stock_min/stk_min_parquet_2000-2025")
+DATA_PATH = Path("/mnt/h/stock_min/stk_min_parquet_2000-2026")
 
 pytestmark = pytest.mark.skipif(
     not DATA_PATH.exists(),

@@ -6,7 +6,7 @@ import pytest
 import czsc
 import czsc.connectors.etf_min_connector as emc
 
-DATA_PATH = Path("/mnt/h/etf_min/etf_min_parquet_2000-2025")
+DATA_PATH = Path("/mnt/h/etf_min/etf_min_parquet_2000-2026")
 
 pytestmark = pytest.mark.skipif(
     not DATA_PATH.exists(),
