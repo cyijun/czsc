@@ -62,7 +62,7 @@ def get_raw_bars(
         fq: 复权类型，本地数据按原样提供，本参数仅做签名兼容
         raw_bars: True 返回 list[RawBar]，False 返回 DataFrame
     """
-    prefixed_code, exchange, numeric = _parse_symbol(symbol)
+    _, exchange, numeric = _parse_symbol(symbol)
 
     freq_str = freq.value if isinstance(freq, czsc.Freq) else freq
     freq_dir = _freq_to_dir(freq) if freq_str in {"1分钟", "5分钟", "15分钟", "30分钟", "60分钟"} else None
