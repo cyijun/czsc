@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import pandas as pd
 import polars as pl
@@ -69,7 +70,7 @@ def get_raw_bars(
         if not base_path.exists():
             raise FileNotFoundError(f"找不到 ETF 1分钟数据文件: {base_path}")
         df = _read_etf_bars(base_path, prefixed_code, exchange, numeric)
-        df = czsc.resample_bars(df, target_freq=freq, raw_bars=False, base_freq="1分钟")
+        df = cast(pd.DataFrame, czsc.resample_bars(df, target_freq=freq, raw_bars=False, base_freq="1分钟"))
 
     df = _filter_by_date(df, sdt, edt)
     if df.empty:

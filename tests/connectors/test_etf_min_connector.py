@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 import czsc
@@ -35,6 +36,7 @@ def test_etf_get_raw_bars_all_formats():
 
 def test_etf_get_raw_bars_dataframe():
     df = emc.get_raw_bars("510300.SH", "5分钟", "20240101", "20240131", raw_bars=False)
+    assert isinstance(df, pd.DataFrame)
     assert list(df.columns) == ["symbol", "dt", "open", "close", "high", "low", "vol", "amount"]
     assert len(df) > 0
 
