@@ -43,6 +43,7 @@ def sector_summary(df: pd.DataFrame) -> pd.DataFrame:
     """按板块、策略汇总 2025-2026H1 的平均指标。"""
     filtered = df[df["period"] == "2025-2026H1"].copy()
     grouped = filtered.groupby(["sector", "strategy"])[METRICS].mean().reset_index()
+    grouped["trades"] = grouped["trades"].round().astype(int)
     return grouped
 
 
@@ -50,7 +51,9 @@ def best_per_sector(df: pd.DataFrame, metric: str = "sharpe") -> pd.DataFrame:
     """每个板块 combined 策略下指定指标最优的品种。"""
     filtered = df[(df["period"] == "2025-2026H1") & (df["strategy"] == "combined")].copy()
     idx = filtered.groupby("sector")[metric].idxmax()
-    return filtered.loc[idx, ["sector", "symbol", "strategy"] + METRICS].reset_index(drop=True)
+    best = filtered.loc[idx, ["sector", "symbol", "strategy"] + METRICS].reset_index(drop=True)
+    best["trades"] = best["trades"].round().astype(int)
+    return best
 
 
 def load_focus() -> pd.DataFrame:
