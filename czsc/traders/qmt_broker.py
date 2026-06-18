@@ -305,9 +305,17 @@ class MockQmtBroker(QmtBroker):
             return
 
         print(f"[MockQmt] 开始回放: {merged.index.min()} ~ {merged.index.max()}, 共 {len(merged)} 根 bar")
+        last_trade_date: datetime | None = None
         for dt, row in merged.iterrows():
             if not self._running:
                 break
+
+            # 每个交易日开盘前，把上一交易日买入的份额置为可用
+            current_date = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            if last_trade_date is None or current_date > last_trade_date:
+                self._apply_t1(current_date)
+                last_trade_date = current_date
+
             bar = {"dt": dt, "prices": row.to_dict()}
             self._match_orders(dt, bar["prices"])
             if self._on_bar:
@@ -419,7 +427,7 @@ class MockQmtBroker(QmtBroker):
         if self._on_order:
             self._on_order(order)
 
-    def _apply_t1(self, dt: datetime) -> None:
-        """每日开盘前把昨日买入变成可用。这里简化：每个 bar 都刷新可用。"""
+    def _apply_t1(self, current_date: datetime) -> None:
+        """每日开盘前把上一交易日买入的份额置为可用。"""
         for pos in self.positions.values():
             pos.available_volume = pos.volume

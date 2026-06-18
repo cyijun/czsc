@@ -6,32 +6,24 @@
 - 支持 ``MockQmtBroker`` 本地模拟，也支持未来替换为真实 QMT broker
 
 适配逻辑：
-1. 每根 bar 收盘后，调用 ``strategy.backtest_step(bars)`` 或直接用 ``CzscStrategyBase``
-   维护的内部状态计算目标权重。
-2. 对比当前持仓市值与目标权重，计算每个 symbol 的``目标市值``。
-3. 目标市值 - 当前市值 = 需买入/卖出的金额。
-4. 金额 / 当前价格 = 目标股数（向下取整到 100 的整数倍，A 股一手 100 股）。
-5. 调用 ``broker.place_order`` 下限价单。
+1. 每根 bar 收盘后，调用 ``strategy.on_bar(bar)`` 获取目标权重。
+2. 对比当前持仓与目标持仓，计算需买入/卖出的股数。
+3. 调用 ``broker.place_order`` 下限价单。
+
+资金计算模式：
+- ``fixed_capital`` 不为 None 时：用固定名义本金计算目标股数，适合 0/1 权重的开平策略。
+- ``fixed_capital`` 为 None 时：用动态总资产计算目标股数，适合组合再平衡策略。
 """
 
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from czsc.strategies import CzscStrategyBase
 
 from czsc.traders.qmt_broker import OrderSide, OrderType, QmtBroker
-
-
-@dataclass
-class TargetWeight:
-    """单标的的目标权重。"""
-
-    symbol: str
-    weight: float  # [-1, 1]，正为多头，负为空头
 
 
 class CzscQmtAdapter:
@@ -44,6 +36,7 @@ class CzscQmtAdapter:
         symbols: list[str],
         lot_size: int = 100,
         price_tick: dict[str, float] | None = None,
+        fixed_capital: float | None = None,
         verbose: bool = True,
     ):
         """
@@ -53,6 +46,8 @@ class CzscQmtAdapter:
             symbols: 交易标的列表
             lot_size: 最小交易单位，A 股默认 100 股
             price_tick: 每个 symbol 的价格最小变动单位，用于挂限价单
+            fixed_capital: 固定名义本金。对于 0/1 权重的信号策略，建议设为初始资金，
+                           避免每个 bar 因总资产波动而频繁调仓。
             verbose: 是否打印调仓日志
         """
         self.strategy = strategy
@@ -60,12 +55,13 @@ class CzscQmtAdapter:
         self.symbols = symbols
         self.lot_size = lot_size
         self.price_tick = price_tick or {}
+        self.fixed_capital = fixed_capital
         self.verbose = verbose
 
         # 缓存每个 symbol 最近一次收到的 bar 价格
         self._latest_prices: dict[str, float] = {}
-        # 缓存每个 symbol 上一次的目标持仓股数，避免每个 bar 都发单
-        self._last_target_volume: dict[str, int] = {}
+        # 缓存每个 symbol 上一次的目标权重，仅在权重变化时才调仓
+        self._last_target_weight: dict[str, float] = {}
 
     def on_bar(self, bar: dict) -> None:
         """行情回调入口。
@@ -84,47 +80,54 @@ class CzscQmtAdapter:
         asset = self.broker.query_asset()
         positions = {p.symbol: p for p in self.broker.query_positions()}
 
-        # 3. 按目标权重调仓（仅在目标股数变化时下单）
+        # 计算使用的名义本金
+        capital = self.fixed_capital if self.fixed_capital is not None else asset.total_asset
+
+        # 3. 按目标权重调仓（仅在目标权重变化时下单）
         for symbol, target_weight in target_weights.items():
             price = prices.get(symbol)
             if price is None or price <= 0:
                 continue
+
+            last_weight = self._last_target_weight.get(symbol)
+            # 目标权重未变化则不调仓
+            if last_weight is not None and abs(target_weight - last_weight) < 1e-9:
+                continue
+            self._last_target_weight[symbol] = target_weight
 
             current_pos = positions.get(symbol)
             current_volume = current_pos.volume if current_pos else 0
             available_volume = current_pos.available_volume if current_pos else 0
 
             # 目标股数
-            target_volume = self._weight_to_volume(target_weight, asset.total_asset, price, symbol)
-
-            # 最小调仓阈值：一手
-            delta = target_volume - current_volume
-            if abs(delta) < self.lot_size:
-                continue
+            target_volume = self._weight_to_volume(target_weight, capital, price, symbol)
 
             order_price = self._round_price(price, symbol)
 
             # 买入
-            if delta > 0:
+            if target_volume > current_volume:
                 side = OrderSide.BUY
+                delta = target_volume - current_volume
                 max_buy_volume = int(asset.cash / order_price) // self.lot_size * self.lot_size
                 volume = min(delta, max_buy_volume)
             # 卖出
-            else:
+            elif target_volume < current_volume:
                 side = OrderSide.SELL
-                volume = min(-delta, available_volume)
+                delta = current_volume - target_volume
+                volume = min(delta, available_volume)
+            else:
+                continue
 
             if volume <= 0:
                 continue
 
-            order_id = self.broker.place_order(
+            self.broker.place_order(
                 symbol=symbol,
                 side=side,
                 volume=volume,
                 price=order_price,
                 order_type=OrderType.LIMIT,
             )
-            self._last_target_volume[symbol] = target_volume
             if self.verbose:
                 target_mv = target_volume * price
                 current_mv = current_volume * price
@@ -149,11 +152,11 @@ class CzscQmtAdapter:
         n = len(self.symbols)
         return {s: 1.0 / n for s in self.symbols}
 
-    def _weight_to_volume(self, weight: float, total_asset: float, price: float, symbol: str) -> int:
+    def _weight_to_volume(self, weight: float, capital: float, price: float, symbol: str) -> int:
         """目标权重 → 目标股数，按 lot_size 取整。"""
         if price <= 0:
             return 0
-        target_amount = total_asset * weight
+        target_amount = capital * weight
         raw = int(target_amount / price)
         lot = self.lot_size
         return (raw // lot) * lot

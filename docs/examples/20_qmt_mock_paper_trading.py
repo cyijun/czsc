@@ -131,6 +131,7 @@ def main() -> None:
         symbols=[symbol],
         lot_size=100,
         price_tick={symbol: 0.001},
+        fixed_capital=INITIAL_CASH,  # 0/1 权重策略用固定本金，避免每个 bar 都微调
         verbose=True,
     )
 
