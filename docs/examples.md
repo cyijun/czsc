@@ -111,6 +111,7 @@ uv run python docs/examples/13_lightweight_charts_html.py
 | 19g | [`19g_sector_report.py`](./examples/19g_sector_report.py) | `pandas` 汇总 | 板块扫描结果汇总报告 |
 | 19h | [`19h_kechuang100_etf_comparison.py`](./examples/19h_kechuang100_etf_comparison.py) | `etf_min_connector` · `generate_backtest_report` | 科创100ETF（华夏 vs 易方达）回测对比 + HTML 可视化 |
 | 19i | [`19i_focus_stocks_comparison.py`](./examples/19i_focus_stocks_comparison.py) | `stock_min_connector` · `generate_backtest_report` | 重点关注个股（隆基绿能 vs 澜起科技）回测对比 + HTML 可视化 |
+| 20 | [`20_qmt_mock_paper_trading.py`](./examples/20_qmt_mock_paper_trading.py) | `MockQmtBroker` · `CzscQmtAdapter` | 用 Mock QMT 跑 czsc 策略模拟盘；真实 QMT 接入时只需替换 broker |
 
 > 本次清理 起原 streamlit 交互面板 10/11/12/14/16 已删除；如需 streamlit 集成，调用方自行 `pip install streamlit` 后用 `st.components.v1.html(plot_czsc(c, output='html'))` 嵌入 HTML 即可。详见 [`migration/cleanup-non-czsc-core.md`](./migration/cleanup-non-czsc-core.md)。
 
