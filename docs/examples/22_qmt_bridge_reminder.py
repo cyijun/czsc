@@ -4,21 +4,43 @@
 周期：30分钟；过滤周期：日线
 通知：飞书群机器人
 
-运行方式：
-    export FEISHU_BOT_KEY=your_key
-    python docs/examples/22_qmt_bridge_reminder.py
+运行方式（二选一）：
+    1. 在项目根目录创建 .env 文件：
+       echo "FEISHU_BOT_KEY=your_key" > .env
+       python docs/examples/22_qmt_bridge_reminder.py
+
+    2. 直接设置环境变量：
+       export FEISHU_BOT_KEY=your_key
+       python docs/examples/22_qmt_bridge_reminder.py
 
 建议用 cron 每 30 分钟执行一次：
-    */30 9-15 * * 1-5 /path/to/.venv/bin/python /path/to/22_qmt_bridge_reminder.py >> /tmp/reminder.log 2>&1
+    */30 9-15 * * 1-5 cd /path/to/project && /path/to/.venv/bin/python docs/examples/22_qmt_bridge_reminder.py >> /tmp/reminder.log 2>&1
 """
 
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 from czsc import Event, Position
 from czsc.connectors import qmt_bridge_connector
 from czsc.traders.reminder_trader import FeishuNotifier, ReminderTrader
+
+
+def _load_dotenv() -> None:
+    """从项目根目录的 .env 文件加载环境变量（不依赖 python-dotenv）。"""
+    env_file = Path(__file__).resolve().parent.parent / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip())
+
+
+_load_dotenv()
 
 SYMBOLS = ["588000.SH", "588800.SH"]
 FEISHU_BOT_KEY = os.environ.get("FEISHU_BOT_KEY", "")
