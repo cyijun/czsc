@@ -107,15 +107,26 @@ def _normalize_kline(records: list[dict[str, Any]], symbol: str) -> pd.DataFrame
 
     df = pd.DataFrame(records)
 
-    # 时间列：优先使用毫秒时间戳 ``time``，其次 ``date`` / ``index``
-    if "time" in df.columns:
-        df["dt"] = pd.to_datetime(df["time"], unit="ms")
+    # 时间列：优先使用 ``index``（本地时间字符串）。qmt-bridge 的 index 字段
+    # 由 xtquant DataFrame 索引生成，为本地交易时间；日线为 20250627，
+    # 分钟线为 20250627143000，需根据长度选择格式。
+    if "index" in df.columns:
+        index_len = df["index"].astype(str).str.len().iloc[0]
+        if index_len == 8:
+            df["dt"] = pd.to_datetime(df["index"], format="%Y%m%d", errors="coerce")
+        elif index_len == 14:
+            df["dt"] = pd.to_datetime(df["index"], format="%Y%m%d%H%M%S", errors="coerce")
+        else:
+            df["dt"] = pd.to_datetime(df["index"], errors="coerce")
+    elif "time" in df.columns:
+        df["dt"] = pd.to_datetime(df["time"], unit="ms", utc=True).dt.tz_convert("Asia/Shanghai").dt.tz_localize(None)
     elif "date" in df.columns:
         df["dt"] = pd.to_datetime(df["date"])
-    elif "index" in df.columns:
-        df["dt"] = pd.to_datetime(df["index"])
     else:
         raise ValueError("qmt-bridge 返回的 K 线数据中未找到时间列（time/date/index）")
+
+    if df["dt"].isna().all():
+        raise ValueError("qmt-bridge 返回的 K 线时间解析失败")
 
     # 成交量字段兼容：qmt-bridge 返回 ``volume``，czsc 使用 ``vol``
     if "volume" in df.columns and "vol" not in df.columns:
