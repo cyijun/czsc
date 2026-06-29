@@ -29,7 +29,8 @@ from czsc.traders.reminder_trader import FeishuNotifier, ReminderTrader
 
 def _load_dotenv() -> None:
     """从项目根目录的 .env 文件加载环境变量（不依赖 python-dotenv）。"""
-    env_file = Path(__file__).resolve().parent.parent / ".env"
+    # 脚本位于 docs/examples/，项目根目录是 docs/examples/ 的上两级
+    env_file = Path(__file__).resolve().parent.parent.parent / ".env"
     if not env_file.exists():
         return
     for line in env_file.read_text(encoding="utf-8").splitlines():
