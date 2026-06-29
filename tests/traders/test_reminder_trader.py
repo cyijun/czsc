@@ -1,4 +1,6 @@
-from czsc.traders.reminder_trader import ConsoleNotifier
+from unittest.mock import patch
+
+from czsc.traders.reminder_trader import ConsoleNotifier, FeishuNotifier
 
 
 def test_console_notifier_records_message():
@@ -9,10 +11,6 @@ def test_console_notifier_records_message():
     assert msg["title"] == "title"
     assert msg["body"] == "body"
     assert msg["metadata"]["action"] == "买入"
-
-
-from unittest.mock import patch
-from czsc.traders.reminder_trader import FeishuNotifier
 
 
 def test_feishu_notifier_calls_push_text():
