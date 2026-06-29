@@ -14,6 +14,9 @@ import czsc
 from czsc.connectors import qmt_bridge_connector
 from czsc.fsa import push_text
 
+# 用于判断 last_bar_dt 是否有效（避免把 pd.Timestamp.min 序列化后无法反序列化）
+_MIN_VALID_DT = pd.Timestamp("1970-01-01", tz=None)
+
 
 class Notifier(ABC):
     """提醒通知器抽象。"""
@@ -183,7 +186,8 @@ class ReminderTrader:
                 state["current_pos"] = int(new_pos)
             last_dt = max(last_dt, pd.to_datetime(bar.dt))
 
-        state["last_bar_dt"] = last_dt.strftime("%Y-%m-%d %H:%M:%S")
+        # 避免把 pd.Timestamp.min（1677 年）序列化到状态文件，否则下次读取可能报错
+        state["last_bar_dt"] = last_dt.strftime("%Y-%m-%d %H:%M:%S") if last_dt > _MIN_VALID_DT else ""
         self.state_store.save(symbol, self.freq, state)
         return reminders
 
@@ -210,7 +214,7 @@ class ReminderTrader:
                 current_pos = 1 if trader.get_ensemble_pos() > 0 else 0
             last_dt = max(last_dt, pd.to_datetime(bar.dt))
 
-        state["last_bar_dt"] = last_dt.strftime("%Y-%m-%d %H:%M:%S")
+        state["last_bar_dt"] = last_dt.strftime("%Y-%m-%d %H:%M:%S") if last_dt > _MIN_VALID_DT else ""
         state["current_pos"] = current_pos
         self.state_store.save(symbol, self.filter_freq, state)
         return current_pos
