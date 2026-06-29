@@ -144,6 +144,8 @@ class ReminderTrader:
 
     def _update_symbol(self, symbol: str) -> list[dict[str, Any]]:
         reminders: list[dict[str, Any]] = []
+        filter_pos = self._update_filter_symbol(symbol)
+
         bars = self._load_bars(symbol, self.freq)
         if not bars:
             logger.warning(f"{symbol} 无 {self.freq} 数据")
@@ -163,7 +165,7 @@ class ReminderTrader:
             trader.update(bar)
             if trader.pos_changed:
                 new_pos = trader.get_ensemble_pos()
-                action = self._decide_action(state["current_pos"], new_pos)
+                action = self._decide_action(state["current_pos"], new_pos, filter_pos)
                 if action:
                     reminder = self._build_reminder(symbol, bar, action, new_pos)
                     if self._should_send(state, reminder):
@@ -179,13 +181,41 @@ class ReminderTrader:
         self.state_store.save(symbol, self.freq, state)
         return reminders
 
-    def _decide_action(self, old_pos: int, new_pos: float) -> str:
+    def _update_filter_symbol(self, symbol: str) -> int:
+        """更新过滤周期 trader，返回当前 filter 仓位。"""
+        if not self.filter_freq or not self.filter_positions:
+            return 1
+
+        bars = self._load_bars(symbol, self.filter_freq)
+        if symbol not in self._filter_traders:
+            self._filter_traders[symbol] = self._init_trader(symbol, self.filter_freq, self.filter_positions)
+        trader = self._filter_traders[symbol]
+
+        state = self.state_store.load(symbol, self.filter_freq)
+        last_dt_str = state.get("last_bar_dt", "")
+        last_dt = pd.to_datetime(last_dt_str) if last_dt_str else pd.Timestamp.min
+
+        current_pos = state.get("current_pos", 0)
+        for bar in bars:
+            if bar.dt <= last_dt:
+                continue
+            trader.update(bar)
+            if trader.pos_changed:
+                current_pos = 1 if trader.get_ensemble_pos() > 0 else 0
+            last_dt = max(last_dt, pd.to_datetime(bar.dt))
+
+        state["last_bar_dt"] = last_dt.strftime("%Y-%m-%d %H:%M:%S")
+        state["current_pos"] = current_pos
+        self.state_store.save(symbol, self.filter_freq, state)
+        return current_pos
+
+    def _decide_action(self, old_pos: int, new_pos: float, filter_pos: int) -> str:
         old = int(old_pos)
         new = 1 if new_pos > 0 else 0
         if old == 0 and new == 1:
-            return "买入"
+            return "买入" if filter_pos > 0 else ""
         if old == 1 and new == 0:
-            return "卖出"
+            return "卖出" if filter_pos == 0 else "减仓"
         return ""
 
     def _build_reminder(self, symbol: str, bar: czsc.RawBar, action: str, pos: float) -> dict[str, Any]:

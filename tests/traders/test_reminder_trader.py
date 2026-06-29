@@ -70,3 +70,31 @@ def test_json_state_store_save_and_load():
         loaded = store.load("588000.SH", "30分钟")
         assert loaded["current_pos"] == 1
         assert loaded["last_bar_dt"] == "2026-06-29 14:00:00"
+
+
+def test_reminder_trader_with_filter_freq():
+    """验证 filter_freq 配置能正常初始化并执行。"""
+    open_event = Event.load(
+        {
+            "name": "日线_阳线_开多",
+            "operate": "开多",
+            "signals_all": ["日线_D1_K线_阳线_任意_任意_0"],
+        }
+    )
+    position = Position(name="test_pos", symbol="TEST", opens=[open_event], exits=[], interval=0)
+
+    notifier = ConsoleNotifier()
+    store = JsonStateStore(base_dir=tempfile.mkdtemp())
+    trader = ReminderTrader(
+        symbols=["000001.SZ"],
+        freq="日线",
+        positions=[position],
+        filter_freq="日线",
+        filter_positions=[position],
+        data_client=qmt_bridge_connector.get_raw_bars,
+        notifier=notifier,
+        state_store=store,
+    )
+    reminders = trader.run_once()
+    assert isinstance(reminders, list)
+    assert trader.filter_freq == "日线"
