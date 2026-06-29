@@ -1,7 +1,38 @@
 import tempfile
 from unittest.mock import patch
 
-from czsc.traders.reminder_trader import ConsoleNotifier, FeishuNotifier, JsonStateStore
+from czsc import Event, Position
+from czsc.connectors import qmt_bridge_connector
+from czsc.traders.reminder_trader import ConsoleNotifier, FeishuNotifier, JsonStateStore, ReminderTrader
+
+
+def test_reminder_trader_runs_once_without_error():
+    """验证 ReminderTrader.run_once 能正常拉取数据、更新状态并返回 list。"""
+    open_event = Event.load(
+        {
+            "name": "日线_阳线_开多",
+            "operate": "开多",
+            "signals_all": ["日线_D1_K线_阳线_任意_任意_0"],
+        }
+    )
+    position = Position(name="test_pos", symbol="TEST", opens=[open_event], exits=[], interval=0)
+
+    notifier = ConsoleNotifier()
+    store = JsonStateStore(base_dir=tempfile.mkdtemp())
+    trader = ReminderTrader(
+        symbols=["000001.SZ"],
+        freq="日线",
+        positions=[position],
+        data_client=qmt_bridge_connector.get_raw_bars,
+        notifier=notifier,
+        state_store=store,
+    )
+    reminders = trader.run_once()
+    assert isinstance(reminders, list)
+
+    # 验证状态被保存
+    state = store.load("000001.SZ", "日线")
+    assert state["last_bar_dt"] != ""
 
 
 def test_console_notifier_records_message():
