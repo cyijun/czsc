@@ -1,4 +1,3 @@
-import pytest
 from czsc.traders.reminder_trader import ConsoleNotifier
 
 
