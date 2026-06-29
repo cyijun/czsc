@@ -12,6 +12,7 @@ describe: QMT Bridge 数据源
 from __future__ import annotations
 
 import os
+import time
 from datetime import datetime
 from typing import Any
 
@@ -38,6 +39,9 @@ _FREQ_MAP: dict[str, str] = {
     "周线": "1w",
     "月线": "1mon",
 }
+
+# xtquant 中 >=5m 的周期由 5m 数据合成，下载时需要先下载 5m 基础数据
+_FREQ_NEEDS_5M_BASE: set[str] = {"15m", "30m", "1h"}
 
 # czsc 复权类型 -> qmt-bridge dividend_type
 _FQ_MAP: dict[str, str] = {
@@ -79,6 +83,21 @@ def _request(method: str, path: str, **params: Any) -> dict[str, Any]:
     if isinstance(result, dict) and "data" in result:
         return result["data"]
     return result
+
+
+def _download_history_data(stock_list: list[str], period: str, start_time: str, end_time: str) -> dict[str, Any]:
+    """触发 qmt-bridge 服务端下载历史 K 线数据到本地。
+
+    该接口为异步操作，服务端在后台执行下载任务。
+    """
+    return _request(
+        "POST",
+        "/api/download/history_data2",
+        stock_list=stock_list,
+        period=period,
+        start_time=start_time,
+        end_time=end_time,
+    )
 
 
 def _normalize_kline(records: list[dict[str, Any]], symbol: str) -> pd.DataFrame:
@@ -173,6 +192,29 @@ def get_raw_bars(
     )
 
     records = data.get(symbol, []) if isinstance(data, dict) else []
+
+    # xtquant 中 15m/30m/1h 等周期由 5m 数据合成，若本地无 5m 基础数据则查询为空。
+    # 当目标周期需要 5m 基础数据且当前未返回数据时，尝试触发 5m 数据下载后重试。
+    if not records and period in _FREQ_NEEDS_5M_BASE and not use_local:
+        try:
+            _download_history_data([symbol], "5m", start_time, end_time)
+            # 等待服务端后台下载完成，qmt-bridge 默认单只 5m 超时约 10 秒
+            time.sleep(12)
+            data = _request(
+                "GET",
+                endpoint,
+                stocks=symbol,
+                period=period,
+                start_time=start_time,
+                end_time=end_time,
+                count=-1,
+                dividend_type=dividend_type,
+                fill_data=True,
+            )
+            records = data.get(symbol, []) if isinstance(data, dict) else []
+        except Exception:
+            pass
+
     df = _normalize_kline(records, symbol)
 
     # 按时间范围过滤（qmt-bridge 可能返回边界外数据）
