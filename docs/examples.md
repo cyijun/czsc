@@ -97,6 +97,22 @@ uv run python docs/examples/13_lightweight_charts_html.py
 |----|------|----------|----------|
 | 17 | [`17_perf_benchmark.py`](./examples/17_perf_benchmark.py) | `CZSC` · `CzscTrader` | 20 年 5 分钟 K 线下 CZSC / CzscTrader 两条路径的吞吐量基准（纯文本输出） |
 
+### 第七组：本地分钟数据实战（19 系列）
+
+| #  | 文件 | 核心 API | 你将看到 |
+|----|------|----------|----------|
+| 19 | [`19_local_minute_event_backtest.py`](./examples/19_local_minute_event_backtest.py) | `etf_min_connector` · `CzscStrategyBase.backtest` | 本地 ETF 分钟数据单 Event 回测 |
+| 19a | [`19a_trend_filtered_3buy.py`](./examples/19a_trend_filtered_3buy.py) | `Event(signals_all)` | 三买 + 笔向上趋势过滤 |
+| 19b | [`19b_multi_period_resonance.py`](./examples/19b_multi_period_resonance.py) | 多 `Position` | 30 分钟 + 60 分钟共振 |
+| 19c | [`19c_exit_comparison.py`](./examples/19c_exit_comparison.py) | `timeout` / `stop_loss` | 5 种退出规则对比 |
+| 19d | [`19d_daily_universe_3buy.py`](./examples/19d_daily_universe_3buy.py) | `generate_czsc_signals` · `adjust_holding_weights` | 日线选股 + 截面回测 |
+| 19e | [`19e_combined_resonance_fixed20.py`](./examples/19e_combined_resonance_fixed20.py) | 多 `Position` · `WeightBacktest` | 多周期共振 + fixed20 组合 |
+| 19f | [`19f_sector_scanner.py`](./examples/19f_sector_scanner.py) | `etf_min_connector` · `stock_min_connector` | 板块内多标的扫描 |
+| 19g | [`19g_sector_report.py`](./examples/19g_sector_report.py) | `pandas` 汇总 | 板块扫描结果汇总报告 |
+| 19h | [`19h_kechuang100_etf_comparison.py`](./examples/19h_kechuang100_etf_comparison.py) | `etf_min_connector` · `generate_backtest_report` | 科创100ETF（华夏 vs 易方达）回测对比 + HTML 可视化 |
+| 19i | [`19i_focus_stocks_comparison.py`](./examples/19i_focus_stocks_comparison.py) | `stock_min_connector` · `generate_backtest_report` | 重点关注个股（隆基绿能 vs 澜起科技）回测对比 + HTML 可视化 |
+| 20 | [`20_qmt_mock_paper_trading.py`](./examples/20_qmt_mock_paper_trading.py) | `MockQmtBroker` · `CzscQmtAdapter` | 用 Mock QMT 跑 czsc 策略模拟盘；真实 QMT 接入时只需替换 broker |
+
 > 本次清理 起原 streamlit 交互面板 10/11/12/14/16 已删除；如需 streamlit 集成，调用方自行 `pip install streamlit` 后用 `st.components.v1.html(plot_czsc(c, output='html'))` 嵌入 HTML 即可。详见 [`migration/cleanup-non-czsc-core.md`](./migration/cleanup-non-czsc-core.md)。
 
 ---

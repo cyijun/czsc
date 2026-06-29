@@ -37,6 +37,18 @@ from czsc._native import (
     get_signals_freqs,
     get_unique_signals,
 )
+from czsc.traders.qmt_adapter import CzscQmtAdapter
+from czsc.traders.qmt_broker import (
+    Asset,
+    MockQmtBroker,
+    Order,
+    OrderSide,
+    OrderStatus,
+    OrderType,
+    Position,
+    QmtBroker,
+    Trade,
+)
 
 # __all__ 显式声明对外公开的符号集合，限定 `from czsc.traders import *` 的行为，
 # 同时方便 IDE 与文档工具识别模块的公共 API。
@@ -44,6 +56,16 @@ __all__ = [
     "CzscSignals",
     "CzscTrader",
     "WeightBacktest",
+    "CzscQmtAdapter",
+    "MockQmtBroker",
+    "QmtBroker",
+    "Order",
+    "OrderSide",
+    "OrderStatus",
+    "OrderType",
+    "Trade",
+    "Position",
+    "Asset",
     "derive_signals_config",
     "derive_signals_freqs",
     "generate_czsc_signals",

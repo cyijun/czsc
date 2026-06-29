@@ -11,17 +11,17 @@ from pathlib import Path
 import pandas as pd
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    SimpleDocTemplate,
+    PageBreak,
     Paragraph,
+    SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
-    PageBreak,
 )
 
 REPORT_DIR = Path(__file__).resolve().parent
@@ -59,13 +59,16 @@ def load_sectors() -> pd.DataFrame:
 def sector_summary(df: pd.DataFrame) -> pd.DataFrame:
     filtered = df[df["period"] == "2025-2026H1"].copy()
     grouped = filtered.groupby(["sector", "strategy"])[METRICS].mean().reset_index()
+    grouped["trades"] = grouped["trades"].round().astype(int)
     return grouped
 
 
 def best_per_sector(df: pd.DataFrame, metric: str = "sharpe") -> pd.DataFrame:
     filtered = df[(df["period"] == "2025-2026H1") & (df["strategy"] == "combined")].copy()
     idx = filtered.groupby("sector")[metric].idxmax()
-    return filtered.loc[idx, ["sector", "symbol"] + METRICS].reset_index(drop=True)
+    best = filtered.loc[idx, ["sector", "symbol"] + METRICS].reset_index(drop=True)
+    best["trades"] = best["trades"].round().astype(int)
+    return best
 
 
 def load_focus() -> pd.DataFrame:
@@ -146,7 +149,15 @@ def df_to_table(df: pd.DataFrame, col_names: list[str] | None = None) -> Table:
     """将 DataFrame 转换为 reportlab Table，支持自定义列名（中文）。"""
     data = [col_names or df.columns.tolist()]
     for _, row in df.iterrows():
-        data.append([f"{v:.4f}" if isinstance(v, float) else str(v) for v in row.values])
+        formatted = []
+        for col, v in zip(df.columns, row.values, strict=True):
+            if col == "trades":
+                formatted.append(str(int(round(v))))
+            elif isinstance(v, float):
+                formatted.append(f"{v:.4f}")
+            else:
+                formatted.append(str(v))
+        data.append(formatted)
     table = Table(data, repeatRows=1)
     table.setStyle(
         TableStyle(
