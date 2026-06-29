@@ -128,9 +128,15 @@ class ReminderTrader:
         self._traders: dict[str, czsc.CzscTrader] = {}
         self._filter_traders: dict[str, czsc.CzscTrader] = {}
 
+        # 从仓位/过滤仓位的事件中推导出需要计算的信号配置
+        unique_signals: list[str] = []
+        for pos in self.positions + self.filter_positions:
+            unique_signals.extend(pos.unique_signals)
+        self.signals_config = czsc.get_signals_config(unique_signals)
+
     def _init_trader(self, symbol: str, freq: str, positions: list[czsc.Position]) -> czsc.CzscTrader:
         bg = czsc.BarGenerator(base_freq=freq, freqs=[freq], max_count=self.lookback + 100)
-        return czsc.CzscTrader(bg, positions=positions, signals_config=[])
+        return czsc.CzscTrader(bg, positions=positions, signals_config=self.signals_config)
 
     def _load_bars(self, symbol: str, freq: str) -> list[czsc.RawBar]:
         state = self.state_store.load(symbol, freq)
