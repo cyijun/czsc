@@ -50,3 +50,19 @@ def test_stock_resample_fallback():
     bars = smc.get_raw_bars("000001.SZ", "2分钟", "20240101", "20240131")
     assert len(bars) > 0
     assert bars[0].freq == czsc.Freq.F2
+
+
+def test_stock_fq_default_is_hfq():
+    """默认 fq='后复权' 应与 '不复权' 价格不同。"""
+    df_hfq = smc.get_raw_bars("000001.SZ", "30分钟", "20240101", "20240131", raw_bars=False, fq="后复权")
+    df_raw = smc.get_raw_bars("000001.SZ", "30分钟", "20240101", "20240131", raw_bars=False, fq="不复权")
+    assert not df_hfq["close"].equals(df_raw["close"])
+
+
+def test_stock_fq_qfq_relation():
+    """同一交易日的 前复权/后复权 收盘价比例应为固定值。"""
+    df_qfq = smc.get_raw_bars("000001.SZ", "30分钟", "20240101", "20240131", raw_bars=False, fq="前复权")
+    df_hfq = smc.get_raw_bars("000001.SZ", "30分钟", "20240101", "20240131", raw_bars=False, fq="后复权")
+    ratio = df_qfq["close"] / df_hfq["close"]
+    daily_std = ratio.groupby(df_qfq["dt"].dt.date).std()
+    assert (daily_std < 1e-12).all()

@@ -382,7 +382,9 @@ def get_raw_bars(
         freq: 目标周期，支持 CZSC 中文周期字符串或 Freq 枚举
         sdt: 开始时间
         edt: 结束时间
-        fq: 复权类型，本地数据按原样提供，本参数仅做签名兼容
+        fq: 复权类型，支持 ``"前复权"``、``"后复权"``、``"不复权"``；默认 ``"后复权"``。
+            从 ``/mnt/h/fq_factor/<prefixed_code>.csv`` 读取复权因子，按交易日合并到
+            OHLC 与成交额；因子文件缺失时回退到未复权并警告。
         raw_bars: True 返回 list[RawBar]，False 返回 DataFrame
     """
     prefixed_code, exchange, numeric = _parse_symbol(symbol)
@@ -580,7 +582,9 @@ def get_raw_bars(
         freq: 目标周期
         sdt: 开始时间
         edt: 结束时间
-        fq: 复权类型，本地数据按原样提供，本参数仅做签名兼容
+        fq: 复权类型，支持 ``"前复权"``、``"后复权"``、``"不复权"``；默认 ``"后复权"``。
+            从 ``/mnt/h/fq_factor/<prefixed_code>.csv`` 读取复权因子，按交易日合并到
+            OHLC 与成交额；因子文件缺失时回退到未复权并警告。
         raw_bars: True 返回 list[RawBar]，False 返回 DataFrame
     """
     prefixed_code, exchange, numeric = _parse_symbol(symbol)

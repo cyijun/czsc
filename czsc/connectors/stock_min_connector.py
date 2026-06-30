@@ -13,6 +13,7 @@ import polars as pl
 import czsc
 from czsc._format_standard_kline import format_standard_kline
 from czsc.connectors._local_minute_utils import (
+    _apply_fq,
     _filter_by_date,
     _freq_to_dir,
     _parse_symbol,
@@ -59,10 +60,11 @@ def get_raw_bars(
         freq: 目标周期
         sdt: 开始时间
         edt: 结束时间
-        fq: 复权类型，本地数据按原样提供，本参数仅做签名兼容
+        fq: 复权类型，支持 ``"前复权"``、``"后复权"``、``"不复权"``；
+            默认 ``"后复权"``。若该股票没有复权因子文件，则回退到未复权并警告。
         raw_bars: True 返回 list[RawBar]，False 返回 DataFrame
     """
-    _, exchange, numeric = _parse_symbol(symbol)
+    prefixed_code, exchange, numeric = _parse_symbol(symbol)
 
     freq_str = freq.value if isinstance(freq, czsc.Freq) else freq
     freq_dir = _freq_to_dir(freq) if freq_str in {"1分钟", "5分钟", "15分钟", "30分钟", "60分钟"} else None
@@ -80,6 +82,7 @@ def get_raw_bars(
             czsc.resample_bars(df, target_freq=freq, raw_bars=False, base_freq="1分钟"),
         )
 
+    df = _apply_fq(df, prefixed_code, fq=fq)
     df = _filter_by_date(df, sdt, edt)
     if df.empty:
         return [] if raw_bars else df
