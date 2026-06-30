@@ -65,6 +65,7 @@ class BacktestVisualizer:
         - ``fee_rate`` / ``weight_type`` / ``yearly_days``：透传给 ``WeightBacktest`` 与 wbt 报告。
         - ``output_dir``：HTML 产物目录；默认 ``_output/backtest_visualizer``。
         - ``theme`` / ``show_sma`` / ``tail_bars``：控制 LWC 图表样式。
+        - ``chart_freq``：交易点位图的 K 线周期；默认用 ``strategy.base_freq``，可指定 ``"日线"`` 等更大周期。
     """
 
     def __init__(
@@ -77,6 +78,7 @@ class BacktestVisualizer:
         theme: ThemeName = "light",
         show_sma: Sequence[int] = (5, 20),
         tail_bars: int | None = None,
+        chart_freq: str | None = None,
     ) -> None:
         self.fee_rate = fee_rate
         self.weight_type = weight_type
@@ -85,6 +87,7 @@ class BacktestVisualizer:
         self.theme: ThemeName = theme
         self.show_sma: tuple[int, ...] = tuple(show_sma)
         self.tail_bars = tail_bars
+        self.chart_freq = chart_freq
 
     @staticmethod
     def holds_to_weight_df(holds: pd.DataFrame) -> pd.DataFrame:
@@ -107,12 +110,21 @@ class BacktestVisualizer:
         df["price"] = df["price"].astype("float64")
         return cast(pd.DataFrame, df[["dt", "symbol", "weight", "price"]])
 
-    def _build_trader(self, bars: Sequence[RawBar], strategy: CzscStrategyBase) -> CzscTrader:
+    def _build_trader(
+        self,
+        bars: Sequence[RawBar],
+        strategy: CzscStrategyBase,
+        *,
+        extra_freqs: Sequence[str] | None = None,
+    ) -> CzscTrader:
         """用 bars 构造一个只用于可视化的 CzscTrader（不带 Position / signals_config）。"""
         base_freq = strategy.base_freq
         freqs = list(getattr(strategy, "freqs", []) or [base_freq])
         if base_freq not in freqs:
             freqs = [base_freq, *freqs]
+        for f in extra_freqs or ():
+            if f not in freqs:
+                freqs.append(f)
 
         bg = BarGenerator(base_freq=base_freq, freqs=freqs, max_count=max(10000, len(bars)))
         for bar in bars:
@@ -122,15 +134,18 @@ class BacktestVisualizer:
     @staticmethod
     def _build_trade_marker_series(
         pairs: pd.DataFrame,
-        base_pane: _data.FreqPayload,
+        target_pane: _data.FreqPayload,
     ) -> list[_signals.SignalSeries]:
-        """把 ``pairs_df`` 的开平仓记录转成可叠加到 base freq pane 的 SignalSeries。"""
+        """把 ``pairs_df`` 的开平仓记录转成可叠加到目标周期 pane 的 SignalSeries。"""
         if pairs.empty:
             return []
 
-        candle_times = sorted(c["time"] for c in base_pane.main.candles)
+        candle_times = sorted(c["time"] for c in target_pane.main.candles)
         if not candle_times:
             return []
+
+        first_time = candle_times[0]
+        last_time = candle_times[-1]
 
         # 开仓：arrowUp；平仓：arrowDown
         open_markers: list[_signals.SignalMarker] = []
@@ -140,8 +155,14 @@ class BacktestVisualizer:
             direction = str(row["交易方向"])
             is_long = "多" in direction or "long" in direction.lower()
 
-            open_ts = _align_time_to_candle(_ts(row["开仓时间"]), candle_times)
-            close_ts = _align_time_to_candle(_ts(row["平仓时间"]), candle_times)
+            open_raw = _ts(row["开仓时间"])
+            close_raw = _ts(row["平仓时间"])
+            # 只保留落在当前 pane 时间窗口内的开平仓；否则会被挤到最左侧/最右侧
+            if open_raw < first_time or close_raw < first_time or open_raw > last_time or close_raw > last_time:
+                continue
+
+            open_ts = _align_time_to_candle(open_raw, candle_times)
+            close_ts = _align_time_to_candle(close_raw, candle_times)
             if open_ts is None or close_ts is None:
                 continue
 
@@ -224,9 +245,10 @@ class BacktestVisualizer:
         pairs: pd.DataFrame,
     ) -> Path:
         """生成 lightweight-charts 交易点位图并落盘。"""
-        ct = self._build_trader(bars, strategy)
+        chart_freq = self.chart_freq or strategy.base_freq
+        ct = self._build_trader(bars, strategy, extra_freqs=[chart_freq] if self.chart_freq else None)
         theme_cols = _theme.get_theme(self.theme)
-        title = f"{ct.symbol} · {tag} 交易点位"
+        title = f"{ct.symbol} · {tag} · {chart_freq} 交易点位"
 
         payload = _data.build_from_trader(
             ct,
@@ -236,22 +258,27 @@ class BacktestVisualizer:
             title=title,
         )
 
-        # 把开平仓 marker 注入到 base freq pane
-        base_freq = strategy.base_freq
-        base_pane: _data.FreqPayload | None = None
-        for pane in payload.panes:
-            if pane.freq_label == base_freq:
-                base_pane = pane
-                break
-        if base_pane is None and payload.panes:
-            base_pane = payload.panes[-1]
+        # 如果指定了 chart_freq，只保留该周期 pane，避免多 tab 干扰
+        if self.chart_freq:
+            filtered = [p for p in payload.panes if p.freq_label == chart_freq]
+            if filtered:
+                payload.panes = filtered
 
-        if base_pane is not None:
-            base_pane.signals.extend(self._build_trade_marker_series(pairs, base_pane))
+        # 把开平仓 marker 注入到目标 pane
+        target_pane: _data.FreqPayload | None = None
+        for pane in payload.panes:
+            if pane.freq_label == chart_freq:
+                target_pane = pane
+                break
+        if target_pane is None and payload.panes:
+            target_pane = payload.panes[-1]
+
+        if target_pane is not None:
+            target_pane.signals.extend(self._build_trade_marker_series(pairs, target_pane))
 
         html = _html_renderer.render(payload)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        path = self.output_dir / f"{tag}_chart.html"
+        path = self.output_dir / f"{tag}_{chart_freq}_chart.html"
         path.write_text(html, encoding="utf-8")
         return path
 

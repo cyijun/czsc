@@ -281,7 +281,7 @@ Rust 实现，位于 `crates/czsc-ta/`，通过 `czsc._native.ta.*` 暴露，顶
 
 | API | 用途 | 实现位置 | 内部依赖 |
 |-----|------|----------|----------|
-| `BacktestVisualizer` | `CzscStrategyBase` 回测 → wbt 绩效 HTML + lightweight-charts 交易点位 HTML | `czsc/utils/plotting/backtest_visualizer.py:52` | `CzscStrategyBase`, `WeightBacktest`, `wbt.generate_backtest_report`, `plot_czsc_trader` 底层 payload |
+| `BacktestVisualizer` | `CzscStrategyBase` 回测 → wbt 绩效 HTML + lightweight-charts 交易点位 HTML；支持 `chart_freq` 切换日线等更大周期 | `czsc/utils/plotting/backtest_visualizer.py:52` | `CzscStrategyBase`, `WeightBacktest`, `wbt.generate_backtest_report`, `BarGenerator`, `_data.build_from_trader` |
 
 **使用方式**：
 ```python

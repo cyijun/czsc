@@ -78,8 +78,9 @@ czsc/                              # Python 顶层包
 ```
 
 > `czsc/utils/plotting/backtest_visualizer.py` 新增 `BacktestVisualizer`：把 `CzscStrategyBase.backtest`
-> 结果一键输出为 wbt 绩效报告 + lightweight-charts 交易点位图。示例见 `docs/examples/21_backtest_visualizer.py`，
-> 文档见 `docs/examples.md` / `docs/public_api.md` §16。
+> 结果一键输出为 wbt 绩效报告 + lightweight-charts 交易点位图；支持通过 `chart_freq` 指定
+> `日线` 等更大周期绘制交易点位。示例见 `docs/examples/21_backtest_visualizer.py` 与
+> `docs/examples/21_etf_backtest_visualizer.py`，文档见 `docs/examples.md` / `docs/public_api.md` §16。
 
 ---
 
