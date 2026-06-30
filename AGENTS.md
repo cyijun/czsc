@@ -77,6 +77,10 @@ czsc/                              # Python 顶层包
 └── utils/                         # 工具子包（analysis / data / io / plotting / optimize / trade）
 ```
 
+> `czsc/utils/plotting/backtest_visualizer.py` 新增 `BacktestVisualizer`：把 `CzscStrategyBase.backtest`
+> 结果一键输出为 wbt 绩效报告 + lightweight-charts 交易点位图。示例见 `docs/examples/21_backtest_visualizer.py`，
+> 文档见 `docs/examples.md` / `docs/public_api.md` §16。
+
 ---
 
 ## 3. 关键配置文件
@@ -340,6 +344,7 @@ tests/
 - 公开 API 参考：`docs/public_api.md`
 - 发布检查清单：`docs/release_checklist.md`
 - 案例索引：`docs/examples.md`；脚本位置：`docs/examples/`
+- 回测可视化类：`czsc/utils/plotting/backtest_visualizer.py`；示例：`docs/examples/21_backtest_visualizer.py`
 - Rust stub 文件：`czsc/_native/__init__.pyi`
 - 人类/Claude 专用指南：`CLAUDE.md`
 - 外部文档：README.md 中列出的飞书 wiki、B 站教程等

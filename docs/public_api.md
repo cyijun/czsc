@@ -275,6 +275,32 @@ Rust 实现，位于 `crates/czsc-ta/`，通过 `czsc._native.ta.*` 暴露，顶
 | `plot_czsc_trader` | 多周期 CzscTrader/CzscSignals → 多 pane HTML | `czsc/utils/plotting/lightweight/__init__.py:87` | `_data.build_from_trader`, `_html_renderer.render`, `_theme` |
 | `plot_czsc_signals` | K 线+信号函数历史触发点叠加 → HTML | `czsc/utils/plotting/lightweight/__init__.py:127` | `generate_czsc_signals`, `get_signals_freqs`, `BarGenerator`, `CzscTrader`, `_signals.build_signal_overlays` |
 
+### 回测可视化（BacktestVisualizer）
+
+定义于 `czsc/utils/plotting/backtest_visualizer.py`，按需导入。
+
+| API | 用途 | 实现位置 | 内部依赖 |
+|-----|------|----------|----------|
+| `BacktestVisualizer` | `CzscStrategyBase` 回测 → wbt 绩效 HTML + lightweight-charts 交易点位 HTML | `czsc/utils/plotting/backtest_visualizer.py:52` | `CzscStrategyBase`, `WeightBacktest`, `wbt.generate_backtest_report`, `plot_czsc_trader` 底层 payload |
+
+**使用方式**：
+```python
+from czsc.utils.plotting.backtest_visualizer import BacktestVisualizer
+
+viz = BacktestVisualizer(output_dir="_output/my_backtest")
+result = viz.run("single_event", strategy, bars, sdt="2022-07-01")
+```
+
+### lightweight-charts HTML 输出
+
+定义于 `czsc/utils/plotting/lightweight/`，按需导入。
+
+| API | 用途 | 实现位置 | 内部依赖 |
+|-----|------|----------|----------|
+| `plot_czsc` | 单周期 CZSC 对象 → lightweight-charts HTML（三 sub-pane：K 线+成交量+MACD） | `czsc/utils/plotting/lightweight/__init__.py:45` | `czsc._native.CZSC`, `_data.build_from_czsc`, `_html_renderer.render`, `_theme` |
+| `plot_czsc_trader` | 多周期 CzscTrader/CzscSignals → 多 pane HTML | `czsc/utils/plotting/lightweight/__init__.py:87` | `_data.build_from_trader`, `_html_renderer.render`, `_theme` |
+| `plot_czsc_signals` | K 线+信号函数历史触发点叠加 → HTML | `czsc/utils/plotting/lightweight/__init__.py:127` | `generate_czsc_signals`, `get_signals_freqs`, `BarGenerator`, `CzscTrader`, `_signals.build_signal_overlays` |
+
 **使用方式**：
 ```python
 from czsc.utils.plotting.lightweight import plot_czsc, plot_czsc_trader, plot_czsc_signals

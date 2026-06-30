@@ -83,6 +83,7 @@ uv run python docs/examples/13_lightweight_charts_html.py
 |----|------|----------|----------|
 | 08 | [`08_weight_backtest.py`](./examples/08_weight_backtest.py) | `WeightBacktest` · `daily_performance` · `top_drawdowns` | 时序权重回测的完整链路 + 核心绩效指标 |
 | 13 | [`13_event_weight_backtest.py`](./examples/13_event_weight_backtest.py) | `CzscStrategyBase.backtest` · `wbt.generate_backtest_report` | 从 `Event` 出发的策略回测 + 一键生成 HTML 报告（single / multi-event） |
+| 21 | [`21_backtest_visualizer.py`](./examples/21_backtest_visualizer.py) | `BacktestVisualizer` | 回测 + wbt 绩效报告 + lightweight-charts 交易点位图，一键输出（single / multi-event） |
 
 ### 第五组：lightweight-charts HTML（自包含交互看图）
 
@@ -139,6 +140,7 @@ uv run python docs/examples/13_lightweight_charts_html.py
 | 后验时段标记 | `czsc.mark_cta_periods` / `mark_volatility` | — |
 | 离线 K 线绘图 | `czsc.utils.plotting.lightweight.plot_czsc{,_trader,_signals}` | 13, 15 |
 | 回测 HTML 报告 | `wbt.generate_backtest_report` | 13 |
+| 回测 + 可视化一键输出 | `czsc.utils.plotting.backtest_visualizer.BacktestVisualizer` | 21 |
 
 ---
 
@@ -162,6 +164,8 @@ uv run python docs/examples/13_lightweight_charts_html.py
 [08] 把 trader / replay 输出的权重做 WeightBacktest 精细回测
    ↓
 [09] 配合 EDA 工具（如 mark_cta_periods）做切片分析
+   ↓
+[21] 用 BacktestVisualizer 同时生成绩效报告 + 交易点位图
    ↓
 [13/15] 生成自包含 HTML 报告分享给协作者
 ```
